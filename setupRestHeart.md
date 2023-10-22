@@ -78,7 +78,7 @@ $ curl -i --user admin:secret -X GET http://localhost:8080/users
 
 Create a user
 ```
-$ curl -i --user admin:secret -X POST http://localhost:8080/users -d '{"_id": "foo", "roles": ["user"], "password": "secret"}'
+curl -i --user admin:secret -H 'Content-Type: application/json' -X POST http://localhost:8080/users -d '{"_id": "foo", "roles": ["user"], "password": "secret"}'
 
 HTTP/1.1 201 Created
 ...
@@ -102,6 +102,9 @@ $ cat inventory-data.json
    { "item": "postcard", "qty": 45, "size": { "h": 10, "w": 15.25, "uom": "cm" }, "status": "A" }
 ]
 
+$ curl -i --user admin:secret -H 'Content-Type: application/json'  -X POST http://localhost:8080/inventory -d @inventory-data.json
+HTTP/1.1 200 OK
+...
 ```
 
 
@@ -112,8 +115,8 @@ $ curl --user admin:secret -X GET http://localhost:8080/inventory
 
 ```
 
-NOTE: The output seems weirg.
-
+NOTE: Do not forget to keep sending the content type header when sending json data, by `-H 'Content-Type: application/json'
+NOTE: So far user admin was used for creating and reading data, this has to be changed.
 
 
 
