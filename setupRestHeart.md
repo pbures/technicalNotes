@@ -115,7 +115,7 @@ $ curl --user admin:secret -X GET http://localhost:8080/inventory
 
 ```
 
-NOTE: Do not forget to keep sending the content type header when sending json data, by `-H 'Content-Type: application/json'
+NOTE: Do not forget to keep sending the content type header when sending json data, by `-H 'Content-Type: application/json'`
 NOTE: So far user admin was used for creating and reading data, this has to be changed.
 
 
