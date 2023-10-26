@@ -1,0 +1,43 @@
+version: "3"
+
+services:
+  restheart:
+    image: softinstigate/restheart:latest
+    environment:
+      RHO: >
+          /mclient/connection-string->"mongodb://mongodb";
+          /https-listener/enabled->true;
+          /https-listener/host->"0.0.0.0";
+          /https-listener/port->4443;
+          /https-listener/keystore-path->"./etc/adambures.cz.jks";
+          /https-listener/keystore-password->"your-secret";
+          /https-listener/certificate-password->"your-secret";
+
+    volumes:
+      - /home/ec2-user/etc:/opt/restheart/etc
+
+    depends_on:
+      - mongodb
+      - mongodb-init
+
+    ports:
+      - "8080:8080"
+      - "443:4443"
+
+  mongodb:
+    image: mongo:5.0
+    command: [ "--bind_ip_all" ]
+
+    volumes:
+      - /home/ec2-user/data:/data/db
+
+
+  ### Initialize MongoDB as a single node Replica Set
+  mongodb-init:
+    image: mongo:5.0
+
+    depends_on:
+      - mongodb
+    entrypoint: >-
+      bash -c "for i in {1..10}; do mongo --host mongodb --eval
+      'if (!rs.status().ok) rs.initiate();' && break || sleep 3; done"
