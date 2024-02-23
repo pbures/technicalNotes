@@ -165,7 +165,48 @@ $ docker-compose restart
 ```
 
 ## Enable forwarding to local http port
-TBD
+This is as simple as changing the location part of the https server
+
+```
+server {
+    listen [::]:80;
+    listen 80;
+
+    server_name tanks.buresovi.net;
+
+    location ~ /.well-known/acme-challenge {
+        allow all;
+        root /var/www/certbot;
+    }
+
+    return 301 https://tanks.buresovi.net$request_uri;
+}
+
+server {
+    listen [::]:443 ssl;
+    listen 443 ssl;
+
+    server_name tanks.buresovi.net;
+
+    ssl_certificate /etc/nginx/ssl/live/tanks.buresovi.net/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/live/tanks.buresovi.net/privkey.pem;
+
+    #root /var/www/html;
+
+    location / {
+        proxy_pass http://<localIP>:3002;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+IMPORTANT: For some reason the dockerized version of the game running on port 3002 does not accept connection on 127.0.0.1
+
+TODO: Investigate and explain. It's not the first time this happened.
+
 
 ## Links
 1. https://www.cloudbooklet.com/developer/how-to-install-nginx-and-lets-encrypt-with-docker-ubuntu-20-04/
