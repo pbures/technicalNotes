@@ -104,9 +104,21 @@ $ docker-compose up -d
 
 Verify that the certificates were obtained either from logs, or by looking into
 ```
-sudo ls -l ~/nginx-ssl/certbot/conf/live/tanks.buresovi.net/
+$ sudo ls -l ~/nginx-ssl/certbot/conf/live/tanks.buresovi.net/
 cert.pem  chain.pem  fullchain.pem  privkey.pem  README
 ```
+
+You may want to doublecheck the certificate, by:
+```
+$ sudo openssl x509 -in ~/nginx-ssl/certbot/conf/live/tanks.buresovi.net/fullchain.pem -noout -text
+```
+
+To expand the certificate for more DNS subdomains (such as ha.buresovi.net), you may run the certbot with expand option, such as
+```
+$ docker run -v ./certbot/conf:/etc/letsencrypt -v ./certbot/logs:/var/log/letsencrypt -v ./certbot/data:/var/www/certbot  certbot/certbot:latest certonly --webroot --webroot-path=/var/www/certbot --email pavel.bures@gmail.com --agree-tos --no-eff-email --expand -d tanks.buresovi.net -d ha.buresovi.net
+```
+
+
 
 ## Enable static content serving
 
