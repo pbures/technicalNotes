@@ -4,13 +4,13 @@ Setting up nginx as the TLS termination for https traffic using letsencrypt as c
 
 ## Requirements
 1. Have docker installed
-```
+```bash
 $ docker --version
 Docker version 24.0.5, build ced0996
 ```
 1. Have docker-compose installed
-```
-docker-compose --version
+```bash
+$ docker-compose --version
 Docker Compose version v2.20.3
 ```
 1. Have a DNS set up, pointing to the server
@@ -21,8 +21,9 @@ Address: 78.80.161.45
 
 ```
 
+Create a specific user under which we will be running the stack
 
-```
+```bash
 $ sudo useradd -m -U -s /bin/bash webserver
 ```
 
@@ -32,15 +33,15 @@ The letsencrypt provides a tool to receive and autorenew the certificates, .
 Docker compose will be used to setup nginx and the letsencrypt tool in separate containers.
 
 1. Create the directory
-```
+```bash
 $ mkdir ~/nginx-ssl
 ```
 1. Create the docker-compose file
-```
+```bash
 $ vim ~/nginx-ssl/docker-compose.yml
 ```
 with content:
-```
+```yaml
 version: "3.8"
 services:
     web: 
@@ -57,19 +58,19 @@ services:
 
     certbot:
         image: certbot/certbot:latest
-        command: certonly --webroot --webroot-path=/var/www/certbot --email pavel.bures@gmail.com --agree-tos --no-eff-email -d tanks.buresovi.net 
+        command: certonly --webroot --webroot-path=/var/www/certbot --email pavel.bures@gmail.com --agree-tos --no-eff-email -d tanks.buresovi.net -d ha.buresovi.net
         volumes:
             - ./certbot/conf:/etc/letsencrypt
             - ./certbot/logs:/var/log/letsencrypt
             - ./certbot/data:/var/www/certbot
 ```
 1. create nginx conf file
-```
+```bash
 $ mkdir ~/nginx-ssl/conf.d
 $ vim ~/nginx-ssl/conf.d/default.conf
 ```
 with content:
-```
+```nginx
  server {
      listen [::]:80;
      listen 80;
@@ -89,12 +90,12 @@ IMPORTANT: Make sure that the nginx server is accessible on port 80. The letsenc
 In short, the mechanism is that you need to be able to serve a specific challenge from your domain, which is then verified by letsencrypt.
 
 If you encounter any issues, you may want to check the logs, 
-```
+```bash
 $ less -S ~/nginx-ssl/certbot/logs/letsencrypt.log
 ```
 
 Get the certificates, by running the docker images:
-```
+```bash
 $ docker-compose up -d
 [+] Running 3/3
  ✔ Network nginx-ssl_default      Created                                          0.1s 
@@ -103,18 +104,18 @@ $ docker-compose up -d
 ```
 
 Verify that the certificates were obtained either from logs, or by looking into
-```
+```bash
 $ sudo ls -l ~/nginx-ssl/certbot/conf/live/tanks.buresovi.net/
 cert.pem  chain.pem  fullchain.pem  privkey.pem  README
 ```
 
 You may want to doublecheck the certificate, by:
-```
+```bash
 $ sudo openssl x509 -in ~/nginx-ssl/certbot/conf/live/tanks.buresovi.net/fullchain.pem -noout -text
 ```
 
 To expand the certificate for more DNS subdomains (such as ha.buresovi.net), you may run the certbot with expand option, such as
-```
+```bash
 $ docker run -v ./certbot/conf:/etc/letsencrypt -v ./certbot/logs:/var/log/letsencrypt -v ./certbot/data:/var/www/certbot  certbot/certbot:latest certonly --webroot --webroot-path=/var/www/certbot --email pavel.bures@gmail.com --agree-tos --no-eff-email --expand -d tanks.buresovi.net -d ha.buresovi.net
 ```
 
@@ -124,13 +125,13 @@ We will use the systemd service and timer. The certificates are renewed by certb
 ### systemd service
 Create the systemd service, by creating a new file in /etc/systemd/system directory.
 
-``` 
+``` bash
 # cd /etc/systemd/system 
 # vim certbot-renewal.service
 ```
 with the content:
 
-```
+```systemd
 [Unit]
 Description="Certbot executed via docker to renew certificates of webserver"
 
@@ -145,12 +146,12 @@ WantedBy=multi-user.target
 
 ### systemd timer
 Create another file, in the same folder
-```
+```bash
 # vim certbot-renewal.timer 
 ```
 
 with content:
-```
+```systemd
 [Unit]
 Description="Run certbot service every 14 days"
 
@@ -165,12 +166,12 @@ WantedBy=multi-user.target
 ```
 
 Reload the systemctl daemon by
-```
+```bash
 # systemctl daemon-reload
 ```
 
 and verify, enable and start the timer
-```
+```bash
 # systemd-analyze verify /etc/systemd/system/certbot-renewal.*
 # systemctl enable certbot-renewal.timer
 # systemctl start certbot-renewal.timer
@@ -182,11 +183,11 @@ and verify, enable and start the timer
 Modify the nginx config so the https is accepted, and http is redirected to https.
 IMPORTANT: Double check that port 443 is forwarded to your server where you are running the nxing, for instance by port forwarding on the router.
 
-```
+```bash
 $ vim conf.d/default.conf 
 ```
 
-```
+```nginx
 server {
      listen [::]:80;
      listen 80;
@@ -219,7 +220,7 @@ server {
 ```
 
 Create a testfile to verify all works so far:
-```
+```bash
 $ sudo cat > ~/nginx-ssl/public/index.html
 <html>
     <body>
@@ -229,14 +230,14 @@ $ sudo cat > ~/nginx-ssl/public/index.html
 ```
 
 And restart the containers
-```
+```bash
 $ docker-compose restart
 ```
 
 ## Enable forwarding to local http port
 This is as simple as changing the location part of the https server
 
-```
+```nginx
 server {
     listen [::]:80;
     listen 80;
