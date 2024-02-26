@@ -118,6 +118,63 @@ To expand the certificate for more DNS subdomains (such as ha.buresovi.net), you
 $ docker run -v ./certbot/conf:/etc/letsencrypt -v ./certbot/logs:/var/log/letsencrypt -v ./certbot/data:/var/www/certbot  certbot/certbot:latest certonly --webroot --webroot-path=/var/www/certbot --email pavel.bures@gmail.com --agree-tos --no-eff-email --expand -d tanks.buresovi.net -d ha.buresovi.net
 ```
 
+## Set up automatic renewal of certificates
+We will use the systemd service and timer. The certificates are renewed by certbot command renew. 
+
+### systemd service
+Create the systemd service, by creating a new file in /etc/systemd/system directory.
+
+``` 
+# cd /etc/systemd/system 
+# vim certbot-renewal.service
+```
+with the content:
+
+```
+[Unit]
+Description="Certbot executed via docker to renew certificates of webserver"
+
+[Service]
+User=webserver
+WorkingDirectory=/home/webserver/nginx-ssl
+ExecStart=/snap/bin/docker run -v ./certbot/conf:/etc/letsencrypt -v ./certbot/logs:/var/log/letsencrypt -v ./certbot/data:/var/www/certbot  certbot/certbot:latest renew
+
+[Install]
+WantedBy=multi-user.target
+```
+
+### systemd timer
+Create another file, in the same folder
+```
+# vim certbot-renewal.timer 
+```
+
+with content:
+```
+[Unit]
+Description="Run certbot service every 14 days"
+
+[Timer]
+OnUnitActiveSec=14d
+OnCalendar=*-*-1/14
+Persistent=true
+Unit=certbot-renewal.service
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Reload the systemctl daemon by
+```
+# systemctl daemon-reload
+```
+
+and verify, enable and start the timer
+```
+# systemd-analyze verify /etc/systemd/system/certbot-renewal.*
+# systemctl enable certbot-renewal.timer
+# systemctl start certbot-renewal.timer
+```
 
 
 ## Enable static content serving
@@ -222,3 +279,5 @@ TODO: Investigate and explain. It's not the first time this happened.
 
 ## Links
 1. https://www.cloudbooklet.com/developer/how-to-install-nginx-and-lets-encrypt-with-docker-ubuntu-20-04/
+1. https://documentation.suse.com/smart/systems-management/html/systemd-working-with-timers/index.html
+1. https://eff-certbot.readthedocs.io/en/latest/using.html#
